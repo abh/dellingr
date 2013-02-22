@@ -16,20 +16,33 @@ import (
 
 var serverMap map[string]serverStatus
 
+type serverMonitors []serverMonitor
+
+type serverMonitor struct {
+	Id    uint32  `json:"id"`
+	Name  string  `json:"name"`
+	Score float64 `json:"score"`
+}
+
 type serverStatus struct {
 	Id      uint32 `json:"id"`
 	Deleted bool   `json:"deleted"`
 }
 
 func getServerMap() {
-	resp, err := http.Get("http://www.beta.grundclock.com/monitor/map")
-	if err != nil {
-		log.Println("Could not get server map", err)
-	}
+	resp, err := http.Get("http://" + *sitehost + "/monitor/map")
 	defer resp.Body.Close()
+	if err != nil || resp.StatusCode != 200 {
+		log.Println("Could not get server map", resp.StatusCode, err)
+		return
+	}
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Could not read response", err)
+		return
+	}
 
-	// x := make(map[string]serverStatus)
+	// log.Println("body", string(body))
 
 	json.Unmarshal(body, &serverMap)
 
@@ -52,11 +65,11 @@ func serverDataPath(id uint32) string {
 func getServerData(id uint32) (*logScores, error) {
 	path := serverDataPath(id)
 	// url := "http://localhost/~ask/ntp/" + path
-	// url := "http://10.0.201.231:6081/ask/.ntp/beta/" + path
 
-	url := "http://10.0.201.231:6081/servers/2012/" + path
-	// url := "http://s3beta.ntppool.org/servers/2012/" + path
+	// url := "http://10.0.201.231:6081/servers/2012/" + path
 	// url := "http://ntpbeta.s3.amazonaws.com/servers/2012/" + path
+
+	url := "http://" + *s3host + "/servers/2012/" + path
 
 	resp, err := http.Get(url)
 

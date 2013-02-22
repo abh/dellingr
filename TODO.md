@@ -3,4 +3,4 @@
 * split data points into time slices instead of just iterate over them
 * handle 404s etc better
 * periodically refresh the "map"
-* have urls configured on the command line
+* refresh serverMap periodically
