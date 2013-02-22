@@ -3,6 +3,7 @@ package main
 import (
 	. "launchpad.net/gocheck"
 	"log"
+	"net"
 	"testing"
 )
 
@@ -27,4 +28,14 @@ func (s *TestSuite) TestGetServerData(c *C) {
 	c.Assert(err, IsNil)
 	// log.Println("LEN", len(*scores))
 	c.Assert(*scores, HasLen, 44750)
+}
+
+func (s *TestSuite) TestGetServerMonitors(c *C) {
+
+	monitorChannel := make(chan serverMonitors)
+	go getMonitorData(net.ParseIP("207.171.7.151"), monitorChannel)
+
+	monitors := <-monitorChannel
+
+	c.Assert(monitors[0].Name, Equals, "Los Angeles, CA")
 }

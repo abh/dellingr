@@ -116,5 +116,23 @@ func getServerData(id uint32) (*logScores, error) {
 	log.Println("done")
 
 	return &scores, nil
+}
 
+func getMonitorData(ip net.IP, monitorChan chan serverMonitors) {
+	resp, err := http.Get("http://" + *sitehost + "/scores/" + ip.String() + "/monitors?")
+	defer resp.Body.Close()
+	if err != nil || resp.StatusCode != 200 {
+		log.Println("Could not get monitor data", resp.StatusCode, err)
+		return
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Could not read response", err)
+		return
+	}
+
+	monitors := make(map[string]serverMonitors)
+	json.Unmarshal(body, &monitors)
+	monitorData := monitors["monitors"]
+	monitorChan <- monitorData
 }

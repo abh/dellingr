@@ -20,6 +20,12 @@ type homePageData struct {
 	Data map[string]string
 }
 
+type historyData struct {
+	History  *logScores        `json:"history"`
+	Monitors serverMonitors    `json:"monitors"`
+	Server   map[string]string `json:"server"`
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := template.New("index").Parse(index_tpl)
@@ -68,6 +74,9 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("looking for data for server", serverId)
 
+	monitorChannel := make(chan serverMonitors)
+	go getMonitorData(ip, monitorChannel)
+
 	scores, err := getServerData(serverId)
 	if err != nil {
 		w.WriteHeader(500)
@@ -85,7 +94,14 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Now has", len(*scores))
 	}
 
-	js, err := json.Marshal(map[string]interface{}{"history": scores})
+	monitors := <-monitorChannel
+
+	history := historyData{}
+	history.History = scores
+	history.Server = map[string]string{"ip": ip.String()}
+	history.Monitors = monitors
+
+	js, err := json.Marshal(history)
 	if err != nil {
 		w.WriteHeader(500)
 		log.Println("Error generating json", err)
