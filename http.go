@@ -61,6 +61,11 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serverId := getServerId(&ip)
+	if serverId == 0 {
+		w.WriteHeader(404)
+		return
+	}
+
 	log.Println("looking for data for server", serverId)
 
 	scores, err := getServerData(serverId)
