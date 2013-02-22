@@ -72,6 +72,10 @@ func (ls *logScores) WorstOffset(t int) *logScores {
 		}
 
 		switch l.Offset.(type) {
+
+		case nil:
+			continue
+
 		case bool:
 			// log.Println("bool...")
 			continue
@@ -93,7 +97,7 @@ func (ls *logScores) WorstOffset(t int) *logScores {
 			}
 
 		default:
-			log.Printf("type %v %#v\n", l.Offset, l.Offset)
+			log.Printf("type %#v %T %v %#v\n", l, l.Offset, l.Offset, l.Offset)
 			panic("unknown type")
 		}
 
