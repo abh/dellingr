@@ -62,8 +62,9 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Options struct {
-		Points int    `schema:"points"`
-		Type   string `schema:"type"`
+		Points       int    `schema:"points"`
+		Type         string `schema:"type"`
+		SampleMethod string `schema:"sample"`
 	}
 
 	serverId := getServerId(&ip)
@@ -79,18 +80,61 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	scores, err := getServerData(serverId)
 	if err != nil {
-		w.WriteHeader(500)
 		log.Println("Error fetching server data", err)
-		fmt.Fprintln(w, "Could not fetch server data", err)
-		return
+	}
+
+	// 	scores := &logScores{}
+
+	since := uint64(0)
+	if scores != nil && len(*scores) > 0 {
+		if lastScore := scores.Last(); lastScore.Ts > 0 {
+			// TODO(abh) Round the Ts back to midnight so pagination cache better
+			since = lastScore.Ts
+		}
+	}
+
+	for {
+		recentScores, err := getRecentServerData(ip, since, 2000)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println("Error fetching recent server data", err)
+			fmt.Fprintln(w, "Could not fetching recent server data", err)
+			return
+		}
+		if len(*recentScores) > 0 {
+			since = recentScores.Last().Ts
+			// log.Println("Got recent scores", len(*recentScores), len(*scores))
+			if scores == nil {
+				scores = recentScores
+				x := *scores
+				log.Printf("First %v %#v", x[0], x[0])
+			} else {
+				*scores = append(*scores, *recentScores...)
+			}
+
+			log.Println("new length", len(*scores))
+		} else {
+			log.Println("didn't get recent scores!")
+			break
+		}
 	}
 
 	options := new(Options)
 	decoder.Decode(options, r.Form)
 
 	if options.Points > 0 {
-		log.Println("Sampling points", options.Points, len(*scores))
-		scores = scores.WorstOffset(options.Points)
+		log.Println("Sampling points/method", options.Points, options.SampleMethod, len(*scores))
+		switch options.SampleMethod {
+		case "", "sample":
+			scores = scores.Sample(options.Points)
+		case "worst":
+			scores = scores.WorstOffset(options.Points)
+		default:
+			w.WriteHeader(500)
+			fmt.Fprintln(w, "invalid 'sample' parameter")
+			return
+		}
+
 		log.Println("Now has", len(*scores))
 	}
 

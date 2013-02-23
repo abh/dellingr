@@ -4,24 +4,6 @@ import (
 	"log"
 )
 
-// {
-//   "id": 57221729,
-//   "step": 1,
-//   "server_id": 417,
-//   "ts": 1356997998,
-//   "monitor_id": 7,
-//   "score": 20,
-//   "offset": -0.00528514385223389
-// }
-
-// `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-// `monitor_id` int(10) unsigned DEFAULT NULL,
-// `server_id` int(10) unsigned NOT NULL,
-// `ts` datetime NOT NULL,
-// `score` double NOT NULL DEFAULT '0',
-// `step` double NOT NULL DEFAULT '0',
-// `offset` double DEFAULT NULL,
-
 type logScore struct {
 	Id        uint64      `json:"id"`
 	MonitorId uint32      `json:"monitor_id"`
@@ -34,66 +16,67 @@ type logScore struct {
 
 type logScores []*logScore
 
-func (ls *logScores) Sample(t int) *logScores {
-	if t > len(*ls) {
+type filterState map[uint32]*logScore
+
+func (ls *logScores) First() *logScore {
+	scores := *ls
+	return scores[0]
+}
+
+func (ls *logScores) Last() *logScore {
+	scores := *ls
+	return scores[len(scores)-1]
+}
+
+func (ls *logScores) filter(wanted int, fn func(*logScore, *filterState)) *logScores {
+	if wanted > len(*ls) {
 		return ls
 	}
-	rate := len(*ls) / t
-	i := 0
+	rate := len(*ls) / wanted
+
+	state := make(filterState)
 	r := make(logScores, 0)
-	for _, l := range *ls {
-		if i%rate == 0 {
-			log.Printf("Adding number %v\n", i)
-			r = append(r, l)
+	for i, l := range *ls {
+		fn(l, &state)
+		if (i+1)%rate == 0 && l.Ts > 0 {
+			// log.Printf("Adding number %v\n", i)
+
+			for _, l := range state {
+				r = append(r, l)
+			}
+			state = make(filterState)
+
 		}
-		i++
 	}
 	return &r
 }
 
+func (ls *logScores) Sample(t int) *logScores {
+	return ls.filter(t, func(l *logScore, st *filterState) {
+		(*st)[l.MonitorId] = l
+	})
+}
+
 func (ls *logScores) WorstOffset(t int) *logScores {
-	if t > len(*ls) {
-		return ls
-	}
-	rate := len(*ls) / t
-	i := 0
-	r := make(logScores, 0)
 
-	var current *logScore
-	var current_offset float64
+	return ls.filter(t, func(l *logScore, st *filterState) {
 
-	for _, l := range *ls {
-		i++
-		if i%rate == 0 {
-			log.Printf("Adding number %v\n", i)
-			r = append(r, current)
-			current = &logScore{}
-			current_offset = 0
-		}
+		var offset float64
 
 		switch l.Offset.(type) {
 
 		case nil:
-			continue
+			return
 
 		case bool:
 			// log.Println("bool...")
-			continue
+			return
 
 		case float64:
 			// log.Println("float...")
-			offset := l.Offset.(float64)
+			offset = l.Offset.(float64)
 			if offset < 0 {
 				offset = offset * -1
-			}
-
-			if offset > current_offset {
-				// log.Println("Found worse offset", offset, " > ", current_offset)
-				current_offset = offset
-				current = l
-			} else {
-				// log.Println("Found better offset", offset, " < ", current_offset)
-
 			}
 
 		default:
@@ -101,6 +84,20 @@ func (ls *logScores) WorstOffset(t int) *logScores {
 			panic("unknown type")
 		}
 
-	}
-	return &r
+		if current, exists := (*st)[l.MonitorId]; exists {
+			currentOffset := current.Offset.(float64)
+			if currentOffset < 0 {
+				currentOffset *= -1
+			}
+			if offset > currentOffset {
+				(*st)[l.MonitorId] = l
+			}
+		} else {
+			switch l.Offset.(type) {
+			case float64:
+				(*st)[l.MonitorId] = l
+			}
+		}
+	})
+
 }
