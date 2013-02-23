@@ -18,25 +18,23 @@ type logScores []*logScore
 
 type filterState map[uint32]*logScore
 
-func (ls *logScores) First() *logScore {
-	scores := *ls
-	return scores[0]
+func (ls logScores) First() *logScore {
+	return ls[0]
 }
 
-func (ls *logScores) Last() *logScore {
-	scores := *ls
-	return scores[len(scores)-1]
+func (ls logScores) Last() *logScore {
+	return ls[len(ls)-1]
 }
 
-func (ls *logScores) filter(wanted int, fn func(*logScore, *filterState)) *logScores {
-	if wanted > len(*ls) {
+func (ls logScores) filter(wanted int, fn func(*logScore, *filterState)) logScores {
+	if wanted > len(ls) {
 		return ls
 	}
-	rate := len(*ls) / wanted
+	rate := len(ls) / wanted
 
 	state := make(filterState)
 	r := make(logScores, 0)
-	for i, l := range *ls {
+	for i, l := range ls {
 		fn(l, &state)
 		if (i+1)%rate == 0 && l.Ts > 0 {
 			// log.Printf("Adding number %v\n", i)
@@ -48,16 +46,16 @@ func (ls *logScores) filter(wanted int, fn func(*logScore, *filterState)) *logSc
 
 		}
 	}
-	return &r
+	return r
 }
 
-func (ls *logScores) Sample(t int) *logScores {
+func (ls logScores) Sample(t int) logScores {
 	return ls.filter(t, func(l *logScore, st *filterState) {
 		(*st)[l.MonitorId] = l
 	})
 }
 
-func (ls *logScores) WorstOffset(t int) *logScores {
+func (ls logScores) WorstOffset(t int) logScores {
 
 	return ls.filter(t, func(l *logScore, st *filterState) {
 

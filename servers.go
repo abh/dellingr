@@ -62,7 +62,7 @@ func serverDataPath(id uint32) string {
 	return fmt.Sprintf("%v/%v.json.gz", hundreds, id)
 }
 
-func getServerData(id uint32) (*logScores, error) {
+func getServerData(id uint32) (logScores, error) {
 	path := serverDataPath(id)
 	url := "http://" + *s3host + "/servers/2012/" + path
 
@@ -87,22 +87,22 @@ func getServerData(id uint32) (*logScores, error) {
 		score := new(logScore)
 		err := json.Unmarshal([]byte(line), &score)
 		if err != nil {
-			return &scores, err
+			return scores, err
 		}
 		scores = append(scores, score)
 
 	}
 	if err != nil && err != io.EOF {
 		log.Println(err)
-		return &scores, err
+		return scores, err
 	}
 
 	log.Println("done")
 
-	return &scores, nil
+	return scores, nil
 }
 
-func getRecentServerData(ip net.IP, since uint64, count int) (*logScores, error) {
+func getRecentServerData(ip net.IP, since uint64, count int) (logScores, error) {
 	url := fmt.Sprintf("http://%s/scores/%s/json?since=%d&limit=%d&monitor=*", *sitehost, ip.String(), since, count)
 	log.Println("getting URL", url)
 
@@ -127,7 +127,7 @@ func getRecentServerData(ip net.IP, since uint64, count int) (*logScores, error)
 	data := historyData{}
 	json.Unmarshal(body, &data)
 
-	log.Println("Got number of recent scores:", len(*data.History))
+	log.Println("Got number of recent scores:", len(data.History))
 
 	return data.History, nil
 

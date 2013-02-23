@@ -21,7 +21,7 @@ type homePageData struct {
 }
 
 type historyData struct {
-	History  *logScores        `json:"history"`
+	History  logScores         `json:"history"`
 	Monitors serverMonitors    `json:"monitors"`
 	Server   map[string]string `json:"server"`
 }
@@ -86,7 +86,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	// 	scores := &logScores{}
 
 	since := uint64(0)
-	if scores != nil && len(*scores) > 0 {
+	if scores != nil && len(scores) > 0 {
 		if lastScore := scores.Last(); lastScore.Ts > 0 {
 			// TODO(abh) Round the Ts back to midnight so pagination cache better
 			since = lastScore.Ts
@@ -101,18 +101,16 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, "Could not fetching recent server data", err)
 			return
 		}
-		if len(*recentScores) > 0 {
+		if len(recentScores) > 0 {
 			since = recentScores.Last().Ts
 			// log.Println("Got recent scores", len(*recentScores), len(*scores))
 			if scores == nil {
 				scores = recentScores
-				x := *scores
-				log.Printf("First %v %#v", x[0], x[0])
 			} else {
-				*scores = append(*scores, *recentScores...)
+				scores = append(scores, recentScores...)
 			}
 
-			log.Println("new length", len(*scores))
+			log.Println("new length", len(scores))
 		} else {
 			log.Println("didn't get recent scores!")
 			break
@@ -123,7 +121,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	decoder.Decode(options, r.Form)
 
 	if options.Points > 0 {
-		log.Println("Sampling points/method", options.Points, options.SampleMethod, len(*scores))
+		log.Println("Sampling points/method", options.Points, options.SampleMethod, len(scores))
 		switch options.SampleMethod {
 		case "", "sample":
 			scores = scores.Sample(options.Points)
@@ -135,7 +133,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Println("Now has", len(*scores))
+		log.Println("Now has", len(scores))
 	}
 
 	monitors := <-monitorChannel
