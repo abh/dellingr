@@ -64,39 +64,23 @@ func serverDataPath(id uint32) string {
 
 func getServerData(id uint32) (*logScores, error) {
 	path := serverDataPath(id)
-	// url := "http://localhost/~ask/ntp/" + path
-
-	// url := "http://10.0.201.231:6081/servers/2012/" + path
-	// url := "http://ntpbeta.s3.amazonaws.com/servers/2012/" + path
-
 	url := "http://" + *s3host + "/servers/2012/" + path
 
+	log.Println("getting URL", url)
 	resp, err := http.Get(url)
 
-	log.Println("getting URL", url)
-
-	scores := make(logScores, 0)
-	// scores := make([]interface{}, 0)
-
-	if err != nil {
-		log.Println("Could not get", url, err)
-		return &scores, fmt.Errorf("Could not get url %v: %v", url, err)
+	if err != nil || resp.StatusCode != 200 {
+		log.Println("Could not get server data", resp.StatusCode, err)
+		return nil, fmt.Errorf("%d %s", resp.StatusCode, err)
 	}
 
 	var reader *bufio.Reader
-
-	// gzReader, err := gzip.NewReader(resp.Body)
-	// if err == nil {
-	// log.Println("reading gzip")
-	// reader = bufio.NewReader(gzReader)
-	// } else {
-	// gzReader.Close()
-	log.Println("not gzip")
 	reader = bufio.NewReader(resp.Body)
-	// }
 	defer resp.Body.Close()
 
 	log.Println("Reading")
+
+	scores := make(logScores, 0)
 
 	for line, err := reader.ReadString('\n'); err == nil; line, err = reader.ReadString('\n') {
 		// log.Println("getting line", line, err)
@@ -116,6 +100,37 @@ func getServerData(id uint32) (*logScores, error) {
 	log.Println("done")
 
 	return &scores, nil
+}
+
+func getRecentServerData(ip net.IP, since uint64, count int) (*logScores, error) {
+	url := fmt.Sprintf("http://%s/scores/%s/json?since=%d&limit=%d&monitor=*", *sitehost, ip.String(), since, count)
+	log.Println("getting URL", url)
+
+	resp, err := http.Get(url)
+	defer resp.Body.Close()
+
+	if err != nil {
+		log.Println("Could not get", url, err)
+		return nil, fmt.Errorf("Could not get url %v: %v", url, err)
+	}
+
+	if err != nil || resp.StatusCode != 200 {
+		log.Println("Could not get recent server data", resp.StatusCode, err)
+		return nil, fmt.Errorf("Could not get recent server data: %d %s", resp.StatusCode, err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Could not read response", err)
+		return nil, fmt.Errorf("Could not read response: %s", err)
+	}
+
+	data := historyData{}
+	json.Unmarshal(body, &data)
+
+	log.Println("Got number of recent scores:", len(*data.History))
+
+	return data.History, nil
+
 }
 
 func getMonitorData(ip net.IP, monitorChan chan serverMonitors) {

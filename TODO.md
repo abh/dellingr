@@ -4,3 +4,4 @@
 * handle 404s etc better
 * periodically refresh the "map"
 * refresh serverMap periodically
+* support sampling more than 50% of the data

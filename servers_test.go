@@ -28,6 +28,18 @@ func (s *TestSuite) TestGetServerData(c *C) {
 	c.Assert(err, IsNil)
 	// log.Println("LEN", len(*scores))
 	c.Assert(*scores, HasLen, 44750)
+	c.Assert(scores.First().Id, NotNil)
+	c.Assert(scores.Last().Score, Equals, float64(19))
+}
+
+func (s *TestSuite) TestGetRecentServerData(c *C) {
+	limit := 4000
+	scores, err := getRecentServerData(net.ParseIP("207.171.7.151"), 1357768067, limit)
+	c.Assert(err, IsNil)
+	c.Assert(len(*scores), Equals, limit)
+	c.Assert(scores.Last().Id, NotNil)
+	c.Assert(scores.First().Id, NotNil)
+	//c.Assert(scores.Last().Score, Equals, float64(19))
 }
 
 func (s *TestSuite) TestGetServerMonitors(c *C) {
