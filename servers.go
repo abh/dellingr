@@ -30,6 +30,7 @@ type serverStatus struct {
 }
 
 func getServerMap() {
+	log.Println("Getting server map")
 	resp, err := http.Get("http://" + *sitehost + "/monitor/map")
 	defer resp.Body.Close()
 	if err != nil || resp.StatusCode != 200 {
@@ -45,6 +46,8 @@ func getServerMap() {
 	// log.Println("body", string(body))
 
 	json.Unmarshal(body, &serverMap)
+
+	log.Println("Got servermap")
 
 	// log.Println("RESP", serverMap["173.203.93.85"])
 }
@@ -107,17 +110,17 @@ func getRecentServerData(ip net.IP, since uint64, count int) (logScores, error) 
 	log.Println("getting URL", url)
 
 	resp, err := http.Get(url)
-	defer resp.Body.Close()
-
 	if err != nil {
 		log.Println("Could not get", url, err)
 		return nil, fmt.Errorf("Could not get url %v: %v", url, err)
 	}
+	defer resp.Body.Close()
 
-	if err != nil || resp.StatusCode != 200 {
+	if resp.StatusCode != 200 {
 		log.Println("Could not get recent server data", resp.StatusCode, err)
 		return nil, fmt.Errorf("Could not get recent server data: %d %s", resp.StatusCode, err)
 	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Could not read response", err)
@@ -135,11 +138,15 @@ func getRecentServerData(ip net.IP, since uint64, count int) (logScores, error) 
 
 func getMonitorData(ip net.IP, monitorChan chan serverMonitors) {
 	resp, err := http.Get("http://" + *sitehost + "/scores/" + ip.String() + "/monitors?")
-	defer resp.Body.Close()
 	if err != nil || resp.StatusCode != 200 {
-		log.Println("Could not get monitor data", resp.StatusCode, err)
+		log.Println("Could not get monitor data", err)
+		if resp != nil {
+			log.Println("Monitor data response code", resp.StatusCode)
+		}
+		monitorChan <- make(serverMonitors, 0)
 		return
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Could not read response", err)
