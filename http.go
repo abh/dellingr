@@ -52,7 +52,6 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	_ = r.ParseForm()
-	// ip := net.ParseIP(r.Form.Get("ip"))
 	ip := net.ParseIP(vars["ip"])
 
 	if ip == nil {
@@ -62,9 +61,8 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Options struct {
-		Points       int    `schema:"points"`
-		Type         string `schema:"type"`
-		SampleMethod string `schema:"sample"`
+		Points int    `schema:"points"`
+		Type   string `schema:"type"`
 	}
 
 	serverId := getServerId(&ip)
@@ -121,8 +119,8 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	decoder.Decode(options, r.Form)
 
 	if options.Points > 0 {
-		log.Println("Sampling points/method", options.Points, options.SampleMethod, len(scores))
-		switch options.SampleMethod {
+		log.Println("Sampling points/method", options.Points, options.Type, len(scores))
+		switch options.Type {
 		case "", "sample":
 			scores = scores.Sample(options.Points)
 		case "worst":
