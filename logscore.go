@@ -30,22 +30,32 @@ func (ls logScores) filter(wanted int, fn func(*logScore, *filterState)) logScor
 	if wanted > len(ls) {
 		return ls
 	}
-	rate := len(ls) / wanted
+
+	interval := float64(len(ls)) / float64(wanted)
 
 	state := make(filterState)
 	r := make(logScores, 0)
+
+	// the first data point comes after the first "full sample"
+	next := 1
+
 	for i, l := range ls {
 		fn(l, &state)
-		if (i+1)%rate == 0 && l.Ts > 0 {
-			// log.Printf("Adding number %v\n", i)
+		// log.Printf("at number %d, looking for %v >= %v (cur len %v)\n", i, float64(i+1)/interval, next, len(r))
 
+		if float64(i+1)/interval >= float64(next) && l.Ts > 0 {
+			next++
 			for _, l := range state {
 				r = append(r, l)
 			}
 			state = make(filterState)
-
 		}
+		if len(r) > 200 {
+			// break
+		}
+
 	}
+
 	return r
 }
 
