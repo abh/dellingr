@@ -10,20 +10,21 @@ import (
 // Hook up gocheck into the gotest runner.
 func Test(t *testing.T) { TestingT(t) }
 
-type TestSuite struct {
+type ServerSuite struct {
 }
 
-var _ = Suite(&TestSuite{})
+var _ = Suite(&ServerSuite{})
 
-func (s *TestSuite) TestPaths(c *C) {
-
+func (s *ServerSuite) SetupSuite(c *C) {
 	log.SetFlags(log.Flags() + log.Lmicroseconds)
+}
 
+func (s *ServerSuite) TestPaths(c *C) {
 	c.Check(serverDataPath(417), Equals, "400/417.json.gz")
 	c.Check(serverDataPath(28), Equals, "0/28.json.gz")
 }
 
-func (s *TestSuite) TestGetServerData(c *C) {
+func (s *ServerSuite) TestGetServerData(c *C) {
 	scores, err := getServerData(101)
 	c.Assert(err, IsNil)
 	// log.Println("LEN", len(*scores))
@@ -32,7 +33,7 @@ func (s *TestSuite) TestGetServerData(c *C) {
 	c.Assert(scores.Last().Score, Equals, float64(19))
 }
 
-func (s *TestSuite) TestGetRecentServerData(c *C) {
+func (s *ServerSuite) TestGetRecentServerData(c *C) {
 	limit := 4000
 	scores, err := getRecentServerData(net.ParseIP("207.171.7.151"), 1357768067, limit)
 	c.Assert(err, IsNil)
@@ -42,7 +43,7 @@ func (s *TestSuite) TestGetRecentServerData(c *C) {
 	//c.Assert(scores.Last().Score, Equals, float64(19))
 }
 
-func (s *TestSuite) TestGetServerMonitors(c *C) {
+func (s *ServerSuite) TestGetServerMonitors(c *C) {
 
 	monitorChannel := make(chan serverMonitors)
 	go getMonitorData(net.ParseIP("207.171.7.151"), monitorChannel)
