@@ -45,6 +45,7 @@ func (ls logScores) filter(wanted int, fn func(*logScore, *filterState)) logScor
 
 		if float64(i+1)/interval >= float64(next) && l.Ts > 0 {
 			next++
+			// log.Printf("=== Added number %v, len %d, next %v\n", i, len(r), float64(next)*interval)
 			for _, l := range state {
 				r = append(r, l)
 			}

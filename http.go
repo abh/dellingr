@@ -92,7 +92,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for {
-		recentScores, err := getRecentServerData(ip, since, 2000)
+		recentScores, err := getRecentServerData(ip, since, 4000)
 		if err != nil {
 			w.WriteHeader(500)
 			log.Println("Error fetching recent server data", err)
@@ -148,6 +148,9 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Could not generate JSON")
 		return
 	}
+
+	w.Header().Add("Cache-Control", "max-age=7200")
+
 	fmt.Fprint(w, string(js), "\n")
 }
 
