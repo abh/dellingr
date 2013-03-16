@@ -149,7 +149,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("Cache-Control", "max-age=7200")
+	w.Header().Add("Cache-Control", "max-age=10400")
 
 	fmt.Fprint(w, string(js), "\n")
 }
