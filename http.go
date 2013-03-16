@@ -157,7 +157,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 func httpServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler)
-	r.HandleFunc("/data/{ip:[0-9.:]+}", ApiHandler)
+	r.HandleFunc("/data/{ip:[0-9a-f.:]+}", ApiHandler)
 	http.Handle("/", r)
 	http.ListenAndServe(":8085", nil)
 }
