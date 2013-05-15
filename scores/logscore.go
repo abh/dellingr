@@ -1,40 +1,42 @@
-package main
+package scores
 
 import (
 	"log"
 )
 
-type logScore struct {
-	Id        uint64      `json:"id"`
-	MonitorId uint32      `json:"monitor_id"`
-	ServerId  uint32      `json:"server_id"`
+type LogScore struct {
+	Id        int64       `json:"id"`
+	MonitorId int         `json:"monitor_id"`
+	ServerId  int         `json:"server_id"`
 	Ts        uint64      `json:"ts"`
 	Score     float64     `json:"score"`
 	Step      float64     `json:"step"`
 	Offset    interface{} `json:"offset"`
 }
 
-type logScores []*logScore
+type LogScores []*LogScore
 
-type filterState map[uint32]*logScore
+type filterState map[int]*LogScore
 
-func (ls logScores) First() *logScore {
+func (ls LogScores) First() *LogScore {
 	return ls[0]
 }
 
-func (ls logScores) Last() *logScore {
+func (ls LogScores) Last() *LogScore {
 	return ls[len(ls)-1]
 }
 
-func (ls logScores) filter(wanted int, fn func(*logScore, *filterState)) logScores {
+func (ls LogScores) filter(wanted int, fn func(*LogScore, *filterState)) LogScores {
 	if wanted > len(ls) {
 		return ls
 	}
 
 	interval := float64(len(ls)) / float64(wanted)
 
+	log.Printf("has %d, need %d, interval: %.2f\n", len(ls), wanted, interval)
+
 	state := make(filterState)
-	r := make(logScores, 0)
+	r := make(LogScores, 0)
 
 	// the first data point comes after the first "full sample"
 	next := 1
@@ -45,7 +47,7 @@ func (ls logScores) filter(wanted int, fn func(*logScore, *filterState)) logScor
 
 		if float64(i+1)/interval >= float64(next) && l.Ts > 0 {
 			next++
-			// log.Printf("=== Added number %v, len %d, next %v\n", i, len(r), float64(next)*interval)
+			log.Printf("=== Added number %v, len %d, next %v\n", i, len(r), float64(next)*interval)
 			for _, l := range state {
 				r = append(r, l)
 			}
@@ -60,15 +62,15 @@ func (ls logScores) filter(wanted int, fn func(*logScore, *filterState)) logScor
 	return r
 }
 
-func (ls logScores) Sample(t int) logScores {
-	return ls.filter(t, func(l *logScore, st *filterState) {
+func (ls LogScores) Sample(t int) LogScores {
+	return ls.filter(t, func(l *LogScore, st *filterState) {
 		(*st)[l.MonitorId] = l
 	})
 }
 
-func (ls logScores) WorstOffset(t int) logScores {
+func (ls LogScores) WorstOffset(t int) LogScores {
 
-	return ls.filter(t, func(l *logScore, st *filterState) {
+	return ls.filter(t, func(l *LogScore, st *filterState) {
 
 		var offset float64
 

@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/abh/dellingr/server"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
-	// "strconv"
 )
 
 var decoder = schema.NewDecoder()
@@ -18,12 +18,6 @@ type homePageData struct {
 	Title string
 	// Neighbors Neighbors
 	Data map[string]string
-}
-
-type historyData struct {
-	History  logScores         `json:"history"`
-	Monitors serverMonitors    `json:"monitors"`
-	Server   map[string]string `json:"server"`
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,47 +67,16 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("looking for data for server", serverId)
 
-	monitorChannel := make(chan serverMonitors)
-	go getMonitorData(ip, monitorChannel)
-
-	scores, err := getServerData(serverId)
+	srv := server.NewServer(serverId)
+	history, err := srv.GetData()
 	if err != nil {
-		log.Println("Error fetching server data", err)
+		w.WriteHeader(500)
+		log.Println("Error fetching recent server data", err)
+		fmt.Fprintln(w, "Could not fetching recent server data", err)
+		return
 	}
 
-	// 	scores := &logScores{}
-
-	since := uint64(0)
-	if scores != nil && len(scores) > 0 {
-		if lastScore := scores.Last(); lastScore.Ts > 0 {
-			// TODO(abh) Round the Ts back to midnight so pagination cache better
-			since = lastScore.Ts
-		}
-	}
-
-	for {
-		recentScores, err := getRecentServerData(ip, since, 4000)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println("Error fetching recent server data", err)
-			fmt.Fprintln(w, "Could not fetching recent server data", err)
-			return
-		}
-		if len(recentScores) > 0 {
-			since = recentScores.Last().Ts
-			// log.Println("Got recent scores", len(*recentScores), len(*scores))
-			if scores == nil {
-				scores = recentScores
-			} else {
-				scores = append(scores, recentScores...)
-			}
-
-			log.Println("new length", len(scores))
-		} else {
-			log.Println("didn't get recent scores!")
-			break
-		}
-	}
+	scores := history.History
 
 	options := new(Options)
 	decoder.Decode(options, r.Form)
@@ -134,12 +97,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Now has", len(scores))
 	}
 
-	monitors := <-monitorChannel
-
-	history := historyData{}
-	history.History = scores
 	history.Server = map[string]string{"ip": ip.String()}
-	history.Monitors = monitors
 
 	js, err := json.Marshal(history)
 	if err != nil {
