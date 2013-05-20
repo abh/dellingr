@@ -21,6 +21,8 @@ func (s *S3Suite) TestS3(c *C) {
 	s3region := os.Getenv("S3REGION")
 
 	store := NewStore(s3key, s3secret, s3bucket, s3region)
+	c.Assert(store, NotNil)
+	c.Log("store.BucketRegion", store.BucketRegion)
 	store.Get(177)
 
 }

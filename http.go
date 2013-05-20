@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/abh/dellingr/server"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"html/template"
@@ -59,15 +58,16 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		Type   string `schema:"type"`
 	}
 
-	serverId := getServerId(&ip)
-	if serverId == 0 {
+	log.Println("Looking for IP", ip)
+
+	srv := getServer(&ip)
+	if srv == nil {
 		w.WriteHeader(404)
 		return
 	}
 
-	log.Println("looking for data for server", serverId)
+	log.Println("looking for data for server", srv.Id)
 
-	srv := server.NewServer(serverId)
 	history, err := srv.GetData()
 	if err != nil {
 		w.WriteHeader(500)
@@ -95,6 +95,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Println("Now has", len(scores))
+		history.History = scores
 	}
 
 	history.Server = map[string]string{"ip": ip.String()}

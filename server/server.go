@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 )
 
@@ -19,7 +20,9 @@ var (
 type serverMonitors []serverMonitor
 
 type Server struct {
-	Id int
+	Id      int
+	Ip      *net.IP
+	Deleted bool
 }
 
 type serverMonitor struct {
@@ -45,7 +48,7 @@ func (s *Server) DataPath() string {
 
 func (s *Server) GetData() (*HistoryData, error) {
 	monitorChannel := make(chan serverMonitors)
-	go getMonitorData(s.Id, monitorChannel)
+	go s.getMonitorData(monitorChannel)
 
 	scores, err := s.getArchiveData()
 	if err != nil {
@@ -87,6 +90,7 @@ func (s *Server) GetData() (*HistoryData, error) {
 
 	history := &HistoryData{}
 	history.Monitors = monitors
+	history.History = scores
 
 	return history, nil
 }
@@ -136,7 +140,7 @@ func (s *Server) getArchiveData() (scores.LogScores, error) {
 }
 
 func (s *Server) getRecentData(since uint64, count int) (scores.LogScores, error) {
-	url := fmt.Sprintf("http://%s/scores/%s/json?since=%d&limit=%d&monitor=*", SiteHost, s.Id, since, count)
+	url := fmt.Sprintf("http://%s/scores/%s/json?since=%d&limit=%d&monitor=*", SiteHost, s.Ip.String(), since, count)
 	log.Println("getting URL", url)
 
 	resp, err := http.Get(url)
@@ -166,10 +170,11 @@ func (s *Server) getRecentData(since uint64, count int) (scores.LogScores, error
 
 }
 
-func getMonitorData(id int, monitorChan chan serverMonitors) {
-	resp, err := http.Get(fmt.Sprintf("http://%s/scores/%d/monitors", SiteHost, id))
+func (s *Server) getMonitorData(monitorChan chan serverMonitors) {
+	url := fmt.Sprintf("http://%s/scores/%s/monitors", SiteHost, s.Ip.String())
+	resp, err := http.Get(url)
 	if err != nil || resp.StatusCode != 200 {
-		log.Println("Could not get monitor data", err)
+		log.Println("Could not get monitor data", url, err)
 		if resp != nil {
 			log.Println("Monitor data response code", resp.StatusCode)
 		}

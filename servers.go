@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/abh/dellingr/server"
 	"io/ioutil"
 	"log"
 	"net"
@@ -9,6 +10,10 @@ import (
 )
 
 // http://www.pool.ntp.org/monitor/map
+
+type Servers map[string]*server.Server
+
+var servers Servers
 
 var serverMap map[string]serverStatus
 
@@ -37,13 +42,31 @@ func getServerMap() {
 
 	log.Println("Got servermap")
 
+	servers = make(Servers)
+
+	for ipStr, status := range serverMap {
+		ip := net.ParseIP(ipStr)
+		srv := server.NewServer(status.Id)
+		srv.Deleted = status.Deleted
+		srv.Ip = &ip
+		servers[ip.String()] = srv
+
+	}
+
 	// log.Println("RESP", serverMap["173.203.93.85"])
 }
 
+func getServer(ip *net.IP) *server.Server {
+	// log.Printf("Servers: %#v\n", servers)
+	if srv, ok := servers[ip.String()]; ok {
+		return srv
+	}
+	return nil
+}
+
 func getServerId(ip *net.IP) int {
-	ipstr := ip.String()
-	if status, ok := serverMap[ipstr]; ok {
-		return status.Id
+	if srv, ok := servers[ip.String()]; ok {
+		return srv.Id
 	}
 	return 0
 }
