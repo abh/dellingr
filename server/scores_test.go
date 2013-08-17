@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/abh/dellingr/scores"
 	. "launchpad.net/gocheck"
+	"time"
 )
 
 type ScoreSuite struct {
@@ -13,12 +14,12 @@ type ScoreSuite struct {
 var _ = Suite(&ScoreSuite{})
 
 func (s *ScoreSuite) SetUpSuite(c *C) {
-	srv := NewServer(101)
-	scores, err := srv.GetData()
+	srv := testSrv()
+	scores, err := srv.GetData(time.Unix(0, 0), time.Now())
 	if err != nil {
 		panic("Could not get server scores")
 	}
-	s.scores = scores
+	s.scores = scores.History
 }
 
 func (s *ScoreSuite) TestSample(c *C) {

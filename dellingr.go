@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/abh/dellingr/server"
+	"github.com/abh/dellingr/store"
 	"log"
 	"os"
 	"os/signal"
@@ -40,7 +41,7 @@ func main() {
 		s3bucket := os.Getenv("S3BUCKET")
 		s3region := os.Getenv("S3REGION")
 
-		store := NewStore(s3key, s3secret, s3bucket, s3region)
+		store := store.New(s3key, s3secret, s3bucket, s3region)
 		for ip, server := range serverMap {
 			log.Printf("Updating %s\n", ip)
 			store.Update(server.Id)

@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	. "launchpad.net/gocheck"
@@ -22,7 +22,8 @@ func (s *S3Suite) TestS3(c *C) {
 
 	store := NewStore(s3key, s3secret, s3bucket, s3region)
 	c.Assert(store, NotNil)
+	c.Assert(store.getBucket(), NotNil)
 	c.Log("store.BucketRegion", store.BucketRegion)
-	store.Get(177)
+	files := store.List(177)
 
 }

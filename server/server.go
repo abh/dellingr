@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 )
 
 var (
@@ -21,7 +22,7 @@ type serverMonitors []serverMonitor
 
 type Server struct {
 	Id      int
-	Ip      *net.IP
+	Ip      net.IP
 	Deleted bool
 }
 
@@ -41,12 +42,16 @@ func NewServer(id int) *Server {
 	return &Server{Id: id}
 }
 
-func (s *Server) DataPath() string {
+func (s *Server) dataPath() string {
 	hundreds := s.Id - s.Id%100
 	return fmt.Sprintf("%v/%v.json.gz", hundreds, s.Id)
 }
 
-func (s *Server) GetData() (*HistoryData, error) {
+func (s *Server) GetAllData() (*HistoryData, error) {
+	return s.GetData(time.Unix(0, 0), time.Now())
+}
+
+func (s *Server) GetData(from, to time.Time) (*HistoryData, error) {
 	monitorChannel := make(chan serverMonitors)
 	go s.getMonitorData(monitorChannel)
 
@@ -96,7 +101,7 @@ func (s *Server) GetData() (*HistoryData, error) {
 }
 
 func (s *Server) getArchiveData() (scores.LogScores, error) {
-	path := s.DataPath()
+	path := s.dataPath()
 	url := "http://" + S3Host + "/servers/2012/" + path
 
 	log.Println("getting URL", url)
